@@ -73,7 +73,7 @@ if not shared.VapeDeveloper then
 	local ok, res = pcall(function()
 		return game:HttpGet('https://api.github.com/repos/danielayobami903-stack/Onyxv4/commits/main', true)
 	end)
-	local h = ok and res and res:match('"sha":"([a-f0-9]+)"')
+	local h = ok and res and res:match('"sha"%s*:%s*"(%x+)"')
 	if h and #h == 40 then
 		commit = h
 		pcall(writefile, 'aerov4/profiles/latest.txt', h)

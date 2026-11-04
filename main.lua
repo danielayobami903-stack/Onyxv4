@@ -38,6 +38,36 @@ local isfile = isfile or function(file)
 	return suc and res ~= nil and res ~= ''
 end
 
+local function checkForUpdates()
+	local watermark = '--This watermark is used to delete the file if its cached, remove it to make the file persist after vape updates.'
+	for _, folder in {'aerov4', 'aerov4/games', 'aerov4/profiles', 'aerov4/assets', 'aerov4/libraries', 'aerov4/guis'} do
+		if not isfolder(folder) then makefolder(folder) end
+	end
+	local current = isfile('aerov4/profiles/commit.txt') and readfile('aerov4/profiles/commit.txt') or ''
+	local ok, res = pcall(function()
+		return game:HttpGet('https://api.github.com/repos/danielayobami903-stack/Onyxv4/commits/main', true)
+	end)
+	local latest = ok and type(res) == 'string' and res:match('"sha"%s*:%s*"(%x+)"')
+	if not latest or #latest ~= 40 then
+		if current == '' then writefile('aerov4/profiles/commit.txt', 'main') end
+		return
+	end
+	if latest == current then return end
+	for _, folder in {'aerov4', 'aerov4/games', 'aerov4/guis', 'aerov4/libraries'} do
+		for _, file in listfiles(folder) do
+			if isfile(file) and readfile(file):sub(1, #watermark) == watermark then
+				pcall(delfile, file)
+			end
+		end
+	end
+	writefile('aerov4/profiles/commit.txt', latest)
+	pcall(writefile, 'aerov4/profiles/latest.txt', latest)
+end
+
+if not shared.VapeDeveloper then
+	pcall(checkForUpdates)
+end
+
 if identifyexecutor and table.find({'Madium', 'Medium'}, ({identifyexecutor()})[1]) then
 	local realgca = getcustomasset or getsynasset
 	if realgca then
