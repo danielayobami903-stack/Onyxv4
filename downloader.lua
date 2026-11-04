@@ -70,31 +70,18 @@ end
 if not shared.VapeDeveloper then
 	local commit = isfile('aerov4/profiles/commit.txt') and readfile('aerov4/profiles/commit.txt') or ''
 	local latest = isfile('aerov4/profiles/latest.txt') and readfile('aerov4/profiles/latest.txt') or ''
-	if #commit ~= 40 then
-		local ok, res = pcall(function()
-			return game:HttpGet('https://api.github.com/repos/danielayobami903-stack/Onyxv4/commits/main', true)
-		end)
-		if ok and res then
-			local h = res:match('"sha":"([a-f0-9]+)"')
-			if h and #h == 40 then commit = h end
-		end
-		if #commit ~= 40 then commit = 'main' end
-		latest = commit
-		pcall(writefile, 'aerov4/profiles/latest.txt', latest)
-	elseif #latest == 40 and latest ~= commit then
-		commit = latest
-	end
-	task.spawn(function()
-		local ok, res = pcall(function()
-			return game:HttpGet('https://api.github.com/repos/danielayobami903-stack/Onyxv4/commits/main', true)
-		end)
-		if ok and res then
-			local h = res:match('"sha":"([a-f0-9]+)"')
-			if h and #h == 40 then
-				pcall(writefile, 'aerov4/profiles/latest.txt', h)
-			end
-		end
+	local ok, res = pcall(function()
+		return game:HttpGet('https://api.github.com/repos/danielayobami903-stack/Onyxv4/commits/main', true)
 	end)
+	local h = ok and res and res:match('"sha":"([a-f0-9]+)"')
+	if h and #h == 40 then
+		commit = h
+		pcall(writefile, 'aerov4/profiles/latest.txt', h)
+	elseif #latest == 40 then
+		commit = latest
+	elseif #commit ~= 40 then
+		commit = 'main'
+	end
 	if commit ~= 'main' and (isfile('aerov4/profiles/commit.txt') and readfile('aerov4/profiles/commit.txt') or '') ~= commit then
 		wipeFolder('aerov4')
 		wipeFolder('aerov4/games')
