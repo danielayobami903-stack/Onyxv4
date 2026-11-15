@@ -269,6 +269,18 @@ local function notif(...) return
 	vape:CreateNotification(...)
 end
 
+-- Show one update notice per script version in the current executor session.
+local updateNoticeVersion = '2026-11-16-release-1'
+local updateNoticeEnv = (getgenv and getgenv()) or shared
+if type(updateNoticeEnv) == 'table' and updateNoticeEnv.__aeroUpdateNoticeVersion ~= updateNoticeVersion then
+	local noticeOk = pcall(function()
+		vape:CreateNotification('aerov4', 'Script updated successfully', 5)
+	end)
+	if noticeOk then
+		updateNoticeEnv.__aeroUpdateNoticeVersion = updateNoticeVersion
+	end
+end
+
 local function collection(tags, module, customadd, customremove)
 	tags = typeof(tags) ~= 'table' and {tags} or tags
 	local objs, connections = {}, {}
