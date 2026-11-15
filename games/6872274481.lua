@@ -8869,6 +8869,13 @@ run(function()
 		animPeriod = NORMAL_SWORD_SWING_SPEED
 	end
 
+	local function getKillauraWrist()
+		local camera = gameCamera or workspace.CurrentCamera
+		local viewmodel = camera and camera:FindFirstChild('Viewmodel')
+		local rightHand = viewmodel and viewmodel:FindFirstChild('RightHand')
+		return rightHand and rightHand:FindFirstChild('RightWrist')
+	end
+
 	Killaura = vape.Categories.Blatant:CreateModule({
 		Name = 'Killaura',
 		Function = function(callback)
@@ -8900,18 +8907,28 @@ run(function()
 					task.spawn(function()
 						local started = false
 						repeat
+							local wrist = getKillauraWrist()
+							local mode = AnimationMode and AnimationMode.Value
+							local sequence = mode and anims[mode]
+							if not wrist or type(sequence) ~= 'table' or #sequence == 0 then
+								if AnimTween then pcall(AnimTween.Destroy, AnimTween) AnimTween = nil end
+								if wrist and armC0 then wrist.C0 = armC0 end
+								started = false
+								task.wait(0.1)
+								continue
+							end
 							if Attacking and not (LegitAura and LegitAura.Enabled) then
-								if not armC0 then
-									armC0 = gameCamera.Viewmodel.RightHand.RightWrist.C0
-								end
+								if not armC0 then armC0 = wrist.C0 end
 								local first = not started
 								started = true
-								if AnimationMode.Value == 'Random' then
+								if mode == 'Random' then
 									anims.Random = {{CFrame = CFrame.Angles(math.rad(math.random(1, 360)), math.rad(math.random(1, 360)), math.rad(math.random(1, 360))), Time = 0.12}}
+									sequence = anims.Random
 								end
-								for _, v in anims[AnimationMode.Value] do
-									if AnimTween then AnimTween:Destroy() AnimTween = nil end
-									AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(first and (AnimationTween.Enabled and 0.001 or 0.1) or v.Time / AnimationSpeed.Value, Enum.EasingStyle.Linear), {
+								for _, v in sequence do
+									if AnimTween then pcall(AnimTween.Destroy, AnimTween) AnimTween = nil end
+									local speed = math.max(tonumber(AnimationSpeed and AnimationSpeed.Value) or 1, 0.1)
+									AnimTween = tweenService:Create(wrist, TweenInfo.new(first and (AnimationTween and AnimationTween.Enabled and 0.001 or 0.1) or (v.Time / speed), Enum.EasingStyle.Linear), {
 										C0 = armC0 * v.CFrame
 									})
 									AnimTween:Play()
@@ -8921,16 +8938,19 @@ run(function()
 								end
 							elseif started then
 								started = false
-								if AnimTween then AnimTween:Destroy() AnimTween = nil end
-								AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween and AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
-									C0 = armC0
-								})
-								AnimTween:Play()
+								if AnimTween then pcall(AnimTween.Destroy, AnimTween) AnimTween = nil end
+								if armC0 then
+									AnimTween = tweenService:Create(wrist, TweenInfo.new(AnimationTween and AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+										C0 = armC0
+									})
+									AnimTween:Play()
+								end
 							end
-							if not started then
-								task.wait(1 / 3.5)
-							end
+							if not started then task.wait(1 / 3.5) end
 						until (not Killaura.Enabled) or (not Animation.Enabled)
+						local wrist = getKillauraWrist()
+						if AnimTween then pcall(AnimTween.Destroy, AnimTween) AnimTween = nil end
+						if wrist and armC0 then wrist.C0 = armC0 end
 					end)
 				end
 
@@ -9111,13 +9131,17 @@ run(function()
 				if vapeTargetInfo and vapeTargetInfo.Targets then
 					vapeTargetInfo.Targets.Killaura = nil
 				end
-				if armC0 then
-					if AnimTween then AnimTween:Destroy() AnimTween = nil end
-					AnimTween = tweenService:Create(gameCamera.Viewmodel.RightHand.RightWrist, TweenInfo.new(AnimationTween and AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
-						C0 = armC0
-					})
-					AnimTween:Play()
+				if AnimTween then pcall(AnimTween.Destroy, AnimTween) AnimTween = nil end
+				local wrist = getKillauraWrist()
+				if wrist and armC0 then
+					pcall(function()
+						local restoreTween = tweenService:Create(wrist, TweenInfo.new(AnimationTween and AnimationTween.Enabled and 0.001 or 0.3, Enum.EasingStyle.Exponential), {
+							C0 = armC0
+						})
+						restoreTween:Play()
+					end)
 				end
+				armC0 = nil
 			end
 		end,
 	})
