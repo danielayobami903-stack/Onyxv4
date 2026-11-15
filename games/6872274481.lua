@@ -7597,7 +7597,8 @@ run(function()
 		end
 		if not sword or not sword.tool then return false end
 
-		local meta = bedwars.ItemMeta[sword.tool.Name]
+		local itemMeta = bedwars.ItemMeta
+		local meta = itemMeta and itemMeta[sword.tool.Name]
 		if not meta then return false end
 
 		if Limit and Limit.Enabled then
