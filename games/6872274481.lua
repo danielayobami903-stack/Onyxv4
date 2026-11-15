@@ -269,14 +269,36 @@ local function notif(...) return
 	vape:CreateNotification(...)
 end
 
--- Show one update notice per script version in the current executor session.
-local updateNoticeVersion = '2026-11-16-release-1'
+-- Show once per release, persisting the seen version across executor restarts when file APIs are available.
+local updateNoticeVersion = '2026-11-16-release-2'
+local updateNoticePath = 'aerov4_update_notice.txt'
 local updateNoticeEnv = (getgenv and getgenv()) or shared
-if type(updateNoticeEnv) == 'table' and updateNoticeEnv.__aeroUpdateNoticeVersion ~= updateNoticeVersion then
+local alreadyNotified = type(updateNoticeEnv) == 'table' and updateNoticeEnv.__aeroUpdateNoticeVersion == updateNoticeVersion
+local noticeStateSaved = false
+
+if not alreadyNotified and type(isfile) == 'function' and type(readfile) == 'function' and type(writefile) == 'function' then
+	local stateOk, wasAlreadyNotified = pcall(function()
+		if isfile(updateNoticePath) and readfile(updateNoticePath) == updateNoticeVersion then
+			return true
+		end
+		writefile(updateNoticePath, updateNoticeVersion)
+		return false
+	end)
+	if stateOk then
+		alreadyNotified = wasAlreadyNotified
+		noticeStateSaved = true
+	end
+end
+
+if type(updateNoticeEnv) == 'table' and alreadyNotified then
+	updateNoticeEnv.__aeroUpdateNoticeVersion = updateNoticeVersion
+end
+
+if not alreadyNotified then
 	local noticeOk = pcall(function()
 		vape:CreateNotification('aerov4', 'Script updated successfully', 5)
 	end)
-	if noticeOk then
+	if noticeOk and type(updateNoticeEnv) == 'table' then
 		updateNoticeEnv.__aeroUpdateNoticeVersion = updateNoticeVersion
 	end
 end
