@@ -8582,11 +8582,23 @@ run(function()
 
 		fhBusy = true
 		store._fhBusySince = workspace:GetServerTimeNow()
-		if hotbarSwitch(bowSlot) then task.wait(0.0375) end
-		shootProjectile(item, ammo, projectile, itemMeta, selfPos, ent, true)
-		task.wait(0.075)
-		hotbarSwitch(swordSlot or originalSlot)
+		local shotOk, shotErr = pcall(function()
+			if hotbarSwitch(bowSlot) then task.wait(0.0375) end
+			shootProjectile(item, ammo, projectile, itemMeta, selfPos, ent, true)
+			task.wait(0.075)
+		end)
+
+		-- Restore the exact slot selected before the projectile switch.
+		if originalSlot ~= nil then
+			local restoreOk, restoreErr = pcall(hotbarSwitch, originalSlot)
+			if not restoreOk then
+				warn('[aerov4] FastHits hotbar restore failed: ' .. tostring(restoreErr))
+			end
+		end
 		fhBusy = false
+		if not shotOk then
+			warn('[aerov4] FastHits projectile switch failed: ' .. tostring(shotErr))
+		end
 	end
 
 	local function doFastHits()
