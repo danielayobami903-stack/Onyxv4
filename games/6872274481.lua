@@ -16079,7 +16079,7 @@ run(function()
 	}
 	
 	local function randomizer(tbl)
-	    if not typeof(tbl) == "table" then return end
+	    if typeof(tbl) ~= "table" or #tbl == 0 then return nil end
 	    local index = math.random(1,#tbl)
 	    local value = tbl[index]
 	    return value,index
