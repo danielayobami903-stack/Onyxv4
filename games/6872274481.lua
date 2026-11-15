@@ -7939,26 +7939,33 @@ run(function()
 
 	local function startUseKitsLoop()
 		if useKitLoop then return end
-		local activeKit = getCurrentKit()
-		local supportedName = getSupportedKitDisplayName(activeKit)
+		local initOk, activeKit = pcall(getCurrentKit)
+		local supportedName = initOk and getSupportedKitDisplayName(activeKit) or nil
 		if supportedName then
 			lastNotifiedKit = supportedName
-			notifyKit(supportedName)
+			pcall(notifyKit, supportedName)
 		else
 			lastNotifiedKit = nil
 		end
 
 		useKitLoop = task.spawn(function()
+			local lastKitError = 0
 			while UseKits and UseKits.Enabled do
-				local currentKit = getCurrentKit()
-				local currentSupported = getSupportedKitDisplayName(currentKit)
-				if currentSupported and currentSupported ~= lastNotifiedKit then
-					lastNotifiedKit = currentSupported
-					notifyKit(currentSupported)
-				elseif not currentSupported then
-					lastNotifiedKit = nil
+				local ok, err = pcall(function()
+					local currentKit = getCurrentKit()
+					local currentSupported = getSupportedKitDisplayName(currentKit)
+					if currentSupported and currentSupported ~= lastNotifiedKit then
+						lastNotifiedKit = currentSupported
+						notifyKit(currentSupported)
+					elseif not currentSupported then
+						lastNotifiedKit = nil
+					end
+					executeKitAbilities()
+				end)
+				if not ok and (tick() - lastKitError) >= 5 then
+					lastKitError = tick()
+					warn('[Killaura] kit loop error: ' .. tostring(err))
 				end
-				pcall(executeKitAbilities)
 				task.wait(0.08)
 			end
 			useKitLoop = nil
@@ -8831,16 +8838,20 @@ run(function()
 			while Killaura and Killaura.Enabled do
 				runService.Heartbeat:Wait()
 
-				local sword, meta = getAttackData()
-				if sword and meta then
-					kaPeriod = getAttackDelay(meta)
+				local updateOk, updateErr = pcall(function()
+					local sword, meta = getAttackData()
+					if sword and meta then
+						kaPeriod = getAttackDelay(meta)
+					else
+						kaPeriod = HIT_PERIOD
+					end
 					animPeriod = NORMAL_SWORD_SWING_SPEED
-				else
-					kaPeriod = HIT_PERIOD
-					animPeriod = NORMAL_SWORD_SWING_SPEED
+					updatePreciseClock()
+				end)
+				if not updateOk and (tick() - lastAttemptFireError) >= 2 then
+					lastAttemptFireError = tick()
+					warn('[Killaura] timing update error: ' .. tostring(updateErr))
 				end
-
-				updatePreciseClock()
 
 				local heartbeatDt = 1 / 60
 				local target = kaPeriod - math.min(heartbeatDt * 0.5, kaPeriod * 0.06)
@@ -8932,8 +8943,14 @@ run(function()
 									AnimTween = tweenService:Create(wrist, TweenInfo.new(first and (AnimationTween and AnimationTween.Enabled and 0.001 or 0.1) or (v.Time / speed), Enum.EasingStyle.Linear), {
 										C0 = armC0 * v.CFrame
 									})
-									AnimTween:Play()
-									AnimTween.Completed:Wait()
+									local activeTween = AnimTween
+									activeTween:Play()
+									local waitOk = pcall(function()
+										activeTween.Completed:Wait()
+									end)
+									if not waitOk or AnimTween ~= activeTween or not wrist.Parent then
+										break
+									end
 									first = false
 									if (not Killaura.Enabled) or (not Attacking) then break end
 								end
@@ -9029,9 +9046,19 @@ run(function()
 						end
 						local isClaw = _cachedIsClaw
 
-						local selfpos = entitylib.character.RootPart.Position
-						local flatLV = entitylib.character.RootPart.CFrame.LookVector * Vector3.new(1, 0, 1)
-						local localfacing = flatLV.Magnitude > 0.001 and flatLV.Unit or entitylib.character.RootPart.CFrame.RightVector
+						local selfRoot = entitylib.character and entitylib.character.RootPart
+						if not selfRoot or not selfRoot.Parent then
+							Attacking = false
+							getgenv().Attacking = false
+							store.KillauraTarget = nil
+							_graceTarget = nil
+							_graceUntil = 0
+							task.wait(0.1)
+							continue
+						end
+						local selfpos = selfRoot.Position
+						local flatLV = selfRoot.CFrame.LookVector * Vector3.new(1, 0, 1)
+						local localfacing = flatLV.Magnitude > 0.001 and flatLV.Unit or selfRoot.CFrame.RightVector
 						local maxAngle = math.rad(AngleSlider.Value) / 2
 						local swingPlrs, attackPlrs = gatherTargets()
 
