@@ -8823,6 +8823,9 @@ run(function()
 		kaLastSrv = workspace:GetServerTimeNow() - kaPeriod
 		kaLastSend = 0
 
+		-- Diagnostic only: throttle repeated attemptFire errors without changing attack logic.
+		local lastAttemptFireError = 0
+
 		killauraFireLoop = task.spawn(function()
 			while Killaura and Killaura.Enabled do
 				runService.Heartbeat:Wait()
@@ -8841,7 +8844,11 @@ run(function()
 				local heartbeatDt = 1 / 60
 				local target = kaPeriod - math.min(heartbeatDt * 0.5, kaPeriod * 0.06)
 				if (workspace:GetServerTimeNow() - kaLastSrv) >= target then
-					pcall(attemptFire)
+					local ok, err = pcall(attemptFire)
+					if not ok and (tick() - lastAttemptFireError) >= 2 then
+						lastAttemptFireError = tick()
+						warn('[Killaura] attemptFire error: ' .. tostring(err))
+					end
 				end
 			end
 		end)
@@ -35187,4 +35194,3 @@ run(function()
 		})
 	end
 end)
-
