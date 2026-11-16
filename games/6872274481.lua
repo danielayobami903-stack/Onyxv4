@@ -16403,6 +16403,72 @@ end)
 ]]
 
 run(function()
+	local HideCrosshair
+	local hiddenObjects = {}
+
+	local function isInFirstPerson()
+		local character = lplr.Character
+		local head = character and character:FindFirstChild('Head')
+		return head ~= nil and (head.Position - gameCamera.CFrame.Position).Magnitude < 2
+	end
+
+	local function isCrosshairObject(obj)
+		if not obj:IsA('GuiObject') then return false end
+		local name = string.lower(obj.Name):gsub('[%s_%-]', '')
+		return name:find('crosshair', 1, true) ~= nil
+			or name:find('reticle', 1, true) ~= nil
+			or name == 'aimdot'
+	end
+
+	local function restoreCrosshair()
+		for obj, wasVisible in pairs(hiddenObjects) do
+			if obj and obj.Parent then
+				pcall(function() obj.Visible = wasVisible end)
+			end
+		end
+		table.clear(hiddenObjects)
+	end
+
+	local function updateCrosshair()
+		local playerGui = lplr:FindFirstChildOfClass('PlayerGui')
+		local shouldHide = inputService.TouchEnabled and isInFirstPerson()
+		if not playerGui or not shouldHide then
+			restoreCrosshair()
+			return
+		end
+
+		for _, obj in ipairs(playerGui:GetDescendants()) do
+			if isCrosshairObject(obj) then
+				if hiddenObjects[obj] == nil then
+					hiddenObjects[obj] = obj.Visible
+				end
+				if obj.Visible then
+					obj.Visible = false
+				end
+			end
+		end
+	end
+
+	HideCrosshair = vape.Categories.Utility:CreateModule({
+		Name = 'HideCrosshair',
+		Function = function(callback)
+			if callback then
+				task.spawn(function()
+					repeat
+						pcall(updateCrosshair)
+						task.wait(0.15)
+					until not HideCrosshair.Enabled
+					restoreCrosshair()
+				end)
+			else
+				restoreCrosshair()
+			end
+		end,
+		Tooltip = 'Hides the first-person crosshair on mobile'
+	})
+end)
+
+run(function()
 	local AutoEnchant
 	local EnchantPick
 	local UnlockTable
