@@ -7373,7 +7373,7 @@ run(function()
 	local lastAnimTime = 0 -- Track when last animation was played to prevent doubling
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
 	local FROZEN_THRESHOLD = 10
-	local HIT_PERIOD = 0.396 -- Fallback interval used when weapon metadata is unavailable
+	local HIT_PERIOD = 0.396 -- Killaura hit period fallback matching SafeSpacing
 	local SERVER_FLOOR = 0.292
 	local SERVER_REACH = 14.399
 	local NORMAL_SWORD_SWING_SPEED = 0.35 -- Standard in-game sword swing speed, NEVER changes
@@ -7392,9 +7392,9 @@ run(function()
 
 	-- DYNAMIC SWORD TIMING & HITSPACING SYSTEM
 	local SwordTiming = {
-		SafeSpacing  = 0.300, -- Base spacing used by the Stealth profile
-		HighSpacing  = 0.255, -- Base spacing used by Advanced and Dynamic profiles
-		HitFloor     = 0.292, -- Existing timing floor; not a guaranteed server-side limit.
+		SafeSpacing  = 0.300, -- Stealth Mode delay
+		HighSpacing  = 0.255, -- spacing in each hits for Advanced Mode only
+		HitFloor     = 0.292, --  he server's minimum allowed time between hits. Going below this will cause ghost hits.
 		GapFloor     = 0.2945, -- minimum gap between con hits
 		ArrivalFloor = 0.274, -- how early it can arrive b4 ghosting 
 		CooldownCorrection = (0.017999999225139618 / 10) + 0.013412,
@@ -7627,7 +7627,7 @@ run(function()
 
 		local sword = store.hand
 		if not sword or not sword.tool or not isMeleeWeapon(sword.tool.Name) then
-			sword = (Limit and Limit.Enabled) and nil or (store.tools and store.tools.sword)
+			sword = (Limit and Limit.Enabled) and nil or store.tools.sword
 		end
 		if not sword or not sword.tool then return false end
 
@@ -7763,7 +7763,7 @@ run(function()
 	end
 
 	local function findVoidAxeSlot()
-		for slot, entry in (store.inventory and store.inventory.hotbar) or {} do
+		for slot, entry in store.inventory.hotbar or {} do
 			local item = entry and entry.item
 			local tool = item and item.tool
 			if (item and item.itemType == 'void_axe') or (tool and tool.Name == 'void_axe') then
@@ -7907,7 +7907,7 @@ run(function()
 
 		-- 6. Hannah (Blood For Blood Execution)
 		elseif kit:find('hannah') then
-			if target and target.Character and target.RootPart and (tick() - lastHannahTime) > 0.2 then
+			if target and target.Character and (tick() - lastHannahTime) > 0.2 then
 				if (target.RootPart.Position - myPos).Magnitude <= 16 then
 					local icon = target.Character:FindFirstChild('Hannah Execution Icon')
 					local hasTag = collectionService:HasTag(target.Character, 'HannahExecuteInteraction')
@@ -8941,27 +8941,6 @@ run(function()
 		animPeriod = NORMAL_SWORD_SWING_SPEED
 	end
 
-	-- Touch-device UI helpers: keep mobile HUD access safe across Android client variants.
-	local function isKillauraTouchDevice()
-		local ok, enabled = pcall(function()
-			return inputService and inputService.TouchEnabled == true
-		end)
-		return ok and enabled == true
-	end
-
-	local function setKillauraMobileButtonVisible(visible)
-		if not isKillauraTouchDevice() then return false end
-		local ok, result = pcall(function()
-			local playerGui = lplr and lplr:FindFirstChildOfClass('PlayerGui')
-			local mobileUI = playerGui and playerGui:FindFirstChild('MobileUI')
-			local button = mobileUI and mobileUI:FindFirstChild('2')
-			if not button then return false end
-			button.Visible = visible == true
-			return true
-		end)
-		return ok and result == true
-	end
-
 	local function getKillauraWrist()
 		local camera = gameCamera or workspace.CurrentCamera
 		local viewmodel = camera and camera:FindFirstChild('Viewmodel')
@@ -8980,8 +8959,10 @@ run(function()
 				preciseRemainder = 0
 				preciseTimestamp = tick()
 
-				if isKillauraTouchDevice() and not preserveSwordIcon then
-					setKillauraMobileButtonVisible(Limit and Limit.Enabled)
+				if inputService.TouchEnabled and not preserveSwordIcon then
+					pcall(function()
+						lplr.PlayerGui.MobileUI['2'].Visible = Limit and Limit.Enabled
+					end)
 				end
 
 				if FastHits and FastHits.Enabled then
@@ -9058,10 +9039,10 @@ run(function()
 						return _gatherCache[1], _gatherCache[2]
 					end
 
-					local walls = Targets and Targets.Walls and Targets.Walls.Enabled or nil
-					local players = Targets and Targets.Players and Targets.Players.Enabled or false
-					local npcs = Targets and Targets.NPCs and Targets.NPCs.Enabled or false
-					local sort = sortmethods[Sort and Sort.Value or 'Distance']
+					local walls = Targets.Walls.Enabled or nil
+					local players = Targets.Players.Enabled
+					local npcs = Targets.NPCs.Enabled
+					local sort = sortmethods[Sort.Value]
 
 					local function buildList(range)
 						return entitylib.AllPosition({Range = range, Wallcheck = walls, Part = 'RootPart', Players = players, NPCs = npcs, Limit = 1, Sort = sort})
@@ -9206,8 +9187,8 @@ run(function()
 								local allowSwingAnim = not (LegitAura and LegitAura.Enabled)
 								if allowSwingAnim then
 									-- Fixed animation period to prevent stuttering/doubling
-									local swingSpeed = (SwingTime and SwingTime.Enabled and SwingTimeSlider)
-										and math.max(tonumber(SwingTimeSlider.Value) or animPeriod, 0.11)
+									local swingSpeed = (SwingTime and SwingTime.Enabled)
+										and math.max(SwingTimeSlider.Value, 0.11)
 										or animPeriod
 									lastAnimTime = tick()
 									AnimDelay = tick() + swingSpeed
@@ -9230,8 +9211,8 @@ run(function()
 				stopKillauraFireLoop()
 				stopUseKitsLoop()
 				store.KillauraTarget = nil
-				if isKillauraTouchDevice() then
-					setKillauraMobileButtonVisible(true)
+				if inputService.TouchEnabled then
+					pcall(function() lplr.PlayerGui.MobileUI['2'].Visible = true end)
 				end
 				Attacking = false
 				getgenv().Attacking = false
@@ -9261,7 +9242,7 @@ run(function()
 			end,
 			Default = true
 		})
-		PSI.Object.Visible = isKillauraTouchDevice()
+		PSI.Object.Visible = inputService.TouchEnabled
 	end)
 
 	Targets = Killaura:CreateTargets({
@@ -9344,8 +9325,8 @@ run(function()
 	Limit = Killaura:CreateToggle({
 		Name = 'Limit to items',
 		Function = function(callback)
-			if isKillauraTouchDevice() and Killaura.Enabled then
-				setKillauraMobileButtonVisible(callback)
+			if inputService.TouchEnabled and Killaura.Enabled then
+				pcall(function() lplr.PlayerGui.MobileUI['2'].Visible = callback end)
 			end
 		end,
 		Tooltip = 'checks if you got sword held out'
