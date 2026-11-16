@@ -7373,7 +7373,7 @@ run(function()
 	local lastAnimTime = 0 -- Track when last animation was played to prevent doubling
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
 	local FROZEN_THRESHOLD = 10
-	local HIT_PERIOD = 0.396 -- Killaura hit period fallback matching SafeSpacing
+	local HIT_PERIOD = 0.296 -- Killaura hit period fallback matching SafeSpacing
 	local SERVER_FLOOR = 0.292
 	local SERVER_REACH = 14.399
 	local NORMAL_SWORD_SWING_SPEED = 0.35 -- Standard in-game sword swing speed, NEVER changes
@@ -7392,8 +7392,8 @@ run(function()
 
 	-- DYNAMIC SWORD TIMING & HITSPACING SYSTEM
 	local SwordTiming = {
-		SafeSpacing  = 0.300, -- Stealth Mode delay
-		HighSpacing  = 0.255, -- spacing in each hits for Advanced Mode only
+		SafeSpacing  = 0.295, -- Stealth Mode delay
+		HighSpacing  = 0.2855, -- spacing in each hits for Advanced Mode only
 		HitFloor     = 0.292, --  he server's minimum allowed time between hits. Going below this will cause ghost hits.
 		GapFloor     = 0.2945, -- minimum gap between con hits
 		ArrivalFloor = 0.274, -- how early it can arrive b4 ghosting 
@@ -8020,13 +8020,8 @@ run(function()
 	local FastHitPending = false
 
 	local function getAmmo(check)
-		local inventory = store.inventory and store.inventory.inventory
-		local items = inventory and inventory.items
-		if type(items) ~= 'table' or type(check) ~= 'table' or type(check.ammoItemTypes) ~= 'table' then
-			return nil
-		end
-		for _, item in items do
-			if type(item) == 'table' and item.itemType and table.find(check.ammoItemTypes, item.itemType) then
+		for _, item in store.inventory.inventory.items do
+			if check.ammoItemTypes and table.find(check.ammoItemTypes, item.itemType) then
 				return item.itemType
 			end
 		end
@@ -8042,23 +8037,15 @@ run(function()
 		end
 		_projectilesCacheTime = now
 		table.clear(_projectilesCache)
-		local inventory = store.inventory and store.inventory.inventory
-		local items = inventory and inventory.items
-		local itemMeta = bedwars.ItemMeta
-		local projectileMeta = bedwars.ProjectileMeta
-		if type(items) ~= 'table' or type(itemMeta) ~= 'table' or type(projectileMeta) ~= 'table' then
-			return _projectilesCache
-		end
-		for _, item in items do
-			if type(item) ~= 'table' or not item.itemType then continue end
-			local meta = itemMeta[item.itemType]
+		for _, item in store.inventory.inventory.items do
+			local meta = bedwars.ItemMeta[item.itemType]
 			if not meta then continue end
 			local proj = meta.projectileSource
 			if not proj or not proj.projectileType then continue end
 			local ammo = getAmmo(proj)
 			if not ammo then continue end
 			local projType = proj.projectileType(ammo)
-			local pmeta = projType and projectileMeta[projType]
+			local pmeta = projType and bedwars.ProjectileMeta[projType]
 			if pmeta and pmeta.arrow and pmeta.launchVelocity then
 				table.insert(_projectilesCache, {item, ammo, projType, proj})
 			end
@@ -8359,11 +8346,8 @@ run(function()
 	end
 
 	local function getGloopItem()
-		local inventory = store.inventory and store.inventory.inventory
-		local items = inventory and inventory.items
-		if type(items) ~= 'table' then return nil end
-		for _, item in items do
-			if type(item) == 'table' and item.itemType == 'glue_projectile' then
+		for _, item in store.inventory.inventory.items do
+			if item.itemType == 'glue_projectile' then
 				return item
 			end
 		end
@@ -8371,11 +8355,8 @@ run(function()
 	end
 
 	local function getFireballItem()
-		local inventory = store.inventory and store.inventory.inventory
-		local items = inventory and inventory.items
-		if type(items) ~= 'table' then return nil end
-		for _, item in items do
-			if type(item) == 'table' and item.itemType == 'fireball' then
+		for _, item in store.inventory.inventory.items do
+			if item.itemType == 'fireball' then
 				return item
 			end
 		end
@@ -8409,10 +8390,10 @@ run(function()
 		end
 
 		local myRoot = entitylib.character and entitylib.character.RootPart
-		if not myRoot or not myRoot.Parent or not item or not item.itemType or not item.tool or not item.tool.Parent then return false end
-		if not ent.RootPart.Parent or (ent.RootPart.Position - myRoot.Position).Magnitude > 45 then return false end
+		if not myRoot then return false end
+		if (ent.RootPart.Position - myRoot.Position).Magnitude > 45 then return false end
 
-		local selfPos = myRoot.Position
+		local selfPos = entitylib.character.RootPart.Position
 		local targetPart = ent.RootPart
 
 		local gmeta = bedwars.ProjectileMeta.glue_trap
@@ -8495,10 +8476,10 @@ run(function()
 		end
 
 		local myRoot = entitylib.character and entitylib.character.RootPart
-		if not myRoot or not myRoot.Parent or not item or not item.tool or not item.tool.Parent then return false end
-		if not ent.RootPart.Parent or (ent.RootPart.Position - myRoot.Position).Magnitude > 60 then return false end
+		if not myRoot then return false end
+		if (ent.RootPart.Position - myRoot.Position).Magnitude > 60 then return false end
 
-		local selfPos = myRoot.Position
+		local selfPos = entitylib.character.RootPart.Position
 		local targetPart = ent.RootPart
 
 		local fmeta = bedwars.ProjectileMeta.fireball or {launchVelocity = 80, gravitationalAcceleration = 0}
@@ -8559,9 +8540,7 @@ run(function()
 	local fhUsageIndex = 1
 	local function doFastHitsNEW(ent)
 		if not ent or not ent.RootPart or not entitylib.isAlive then return end
-		local localRoot = entitylib.character and entitylib.character.RootPart
-		if not localRoot or not localRoot.Parent then return end
-		local selfPos = localRoot.Position
+		local selfPos = entitylib.character.RootPart.Position
 
 		local anyOn = (Gloops and Gloops.Enabled) or (Fireballs and Fireballs.Enabled) or (Arrows and Arrows.Enabled)
 		if not anyOn then return end
@@ -8602,9 +8581,7 @@ run(function()
 	local function doFastHitsLegitSwitch(ent)
 		if not ent or not ent.RootPart or not entitylib.isAlive then return end
 
-		local localRoot = entitylib.character and entitylib.character.RootPart
-		if not localRoot or not localRoot.Parent then return end
-		local selfPos = localRoot.Position
+		local selfPos = entitylib.character.RootPart.Position
 
 		if Gloops and Gloops.Enabled then
 			local gloopItem = getGloopItem()
@@ -8819,10 +8796,7 @@ run(function()
 		if not char or not char.PrimaryPart then return false end
 		local tchar = v.Character
 		if not tchar or not tchar.PrimaryPart then return false end
-		local localCharacter = entitylib.character
-		local localRoot = localCharacter and localCharacter.RootPart
-		if not localRoot or not localRoot.Parent then return false end
-		local selfPos = localRoot.Position
+		local selfPos = entitylib.character.RootPart.Position
 		local targetPos = tchar.PrimaryPart.Position
 		local dist = (targetPos - selfPos).Magnitude
 		if dist > AttackRange.Value + 0 then return false end
@@ -9577,13 +9551,8 @@ run(function()
 	end)
 	
 	local function getAmmo(check)
-		local inventory = store.inventory and store.inventory.inventory
-		local items = inventory and inventory.items
-		if type(items) ~= 'table' or type(check) ~= 'table' or type(check.ammoItemTypes) ~= 'table' then
-			return nil
-		end
-		for _, item in items do
-			if type(item) == 'table' and item.itemType and table.find(check.ammoItemTypes, item.itemType) then
+		for _, item in store.inventory.inventory.items do
+			if check.ammoItemTypes and table.find(check.ammoItemTypes, item.itemType) then
 				return item.itemType
 			end
 		end
