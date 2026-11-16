@@ -7373,7 +7373,7 @@ run(function()
 	local lastAnimTime = 0 -- Track when last animation was played to prevent doubling
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
 	local FROZEN_THRESHOLD = 10
-	local HIT_PERIOD = 0.100 -- Fallback interval used when weapon metadata is unavailable
+	local HIT_PERIOD = 0.250 -- Fallback interval used when weapon metadata is unavailable
 	local SERVER_FLOOR = 0.292
 	local SERVER_REACH = 14.399
 	local NORMAL_SWORD_SWING_SPEED = 0.35 -- Standard in-game sword swing speed, NEVER changes
@@ -7392,8 +7392,8 @@ run(function()
 
 	-- DYNAMIC SWORD TIMING & HITSPACING SYSTEM
 	local SwordTiming = {
-		SafeSpacing  = 0.100, -- Base spacing used by the Stealth profile
-		HighSpacing  = 0.100, -- Base spacing used by Advanced and Dynamic profiles
+		SafeSpacing  = 0.299, -- Base spacing used by the Stealth profile
+		HighSpacing  = 0.255, -- Base spacing used by Advanced and Dynamic profiles
 		HitFloor     = 0.292, -- Existing timing floor; not a guaranteed server-side limit.
 		GapFloor     = 0.2945, -- minimum gap between con hits
 		ArrivalFloor = 0.274, -- how early it can arrive b4 ghosting 
@@ -7411,7 +7411,7 @@ run(function()
 	-- HighMode: 'Stealth Mode' | 'Advanced Mode' | 'Dynamic'
 	-- DynamicDelay: slider value (1-100) only used when HighMode == 'Dynamic'
 	function SwordTiming.Calculate(Speed, HighMode, DynamicDelay, Budget, Hits)
-		local Stock = Speed == 0.3
+		local Stock = Speed == 0.5
 		local Normal = (HighMode == 'Advanced Mode' or HighMode == 'Dynamic') and SwordTiming.HighSpacing or SwordTiming.SafeSpacing
 		local Spacing = Stock and Normal or WeaponSpacing[Speed] or Speed + 0.03
 
@@ -7469,7 +7469,7 @@ run(function()
 	local function getAttackDelay(meta)
 		local mode = (HitregMode and HitregMode.Value) or 'Stealth Mode'
 		local dynDelay = (DynamicDelaySlider and DynamicDelaySlider.Value) or 100
-		local Speed = meta.sword and meta.sword.attackSpeed or 0.3
+		local Speed = meta.sword and meta.sword.attackSpeed or 0.5
 		local Budget = 0
 		local Hits = 35
 		
