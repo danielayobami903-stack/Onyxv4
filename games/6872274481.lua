@@ -8020,8 +8020,13 @@ run(function()
 	local FastHitPending = false
 
 	local function getAmmo(check)
-		for _, item in store.inventory.inventory.items do
-			if check.ammoItemTypes and table.find(check.ammoItemTypes, item.itemType) then
+		local inventory = store.inventory and store.inventory.inventory
+		local items = inventory and inventory.items
+		if type(items) ~= 'table' or type(check) ~= 'table' or type(check.ammoItemTypes) ~= 'table' then
+			return nil
+		end
+		for _, item in items do
+			if type(item) == 'table' and item.itemType and table.find(check.ammoItemTypes, item.itemType) then
 				return item.itemType
 			end
 		end
@@ -8037,15 +8042,23 @@ run(function()
 		end
 		_projectilesCacheTime = now
 		table.clear(_projectilesCache)
-		for _, item in store.inventory.inventory.items do
-			local meta = bedwars.ItemMeta[item.itemType]
+		local inventory = store.inventory and store.inventory.inventory
+		local items = inventory and inventory.items
+		local itemMeta = bedwars.ItemMeta
+		local projectileMeta = bedwars.ProjectileMeta
+		if type(items) ~= 'table' or type(itemMeta) ~= 'table' or type(projectileMeta) ~= 'table' then
+			return _projectilesCache
+		end
+		for _, item in items do
+			if type(item) ~= 'table' or not item.itemType then continue end
+			local meta = itemMeta[item.itemType]
 			if not meta then continue end
 			local proj = meta.projectileSource
 			if not proj or not proj.projectileType then continue end
 			local ammo = getAmmo(proj)
 			if not ammo then continue end
 			local projType = proj.projectileType(ammo)
-			local pmeta = projType and bedwars.ProjectileMeta[projType]
+			local pmeta = projType and projectileMeta[projType]
 			if pmeta and pmeta.arrow and pmeta.launchVelocity then
 				table.insert(_projectilesCache, {item, ammo, projType, proj})
 			end
@@ -8540,7 +8553,9 @@ run(function()
 	local fhUsageIndex = 1
 	local function doFastHitsNEW(ent)
 		if not ent or not ent.RootPart or not entitylib.isAlive then return end
-		local selfPos = entitylib.character.RootPart.Position
+		local localRoot = entitylib.character and entitylib.character.RootPart
+		if not localRoot or not localRoot.Parent then return end
+		local selfPos = localRoot.Position
 
 		local anyOn = (Gloops and Gloops.Enabled) or (Fireballs and Fireballs.Enabled) or (Arrows and Arrows.Enabled)
 		if not anyOn then return end
@@ -8581,7 +8596,9 @@ run(function()
 	local function doFastHitsLegitSwitch(ent)
 		if not ent or not ent.RootPart or not entitylib.isAlive then return end
 
-		local selfPos = entitylib.character.RootPart.Position
+		local localRoot = entitylib.character and entitylib.character.RootPart
+		if not localRoot or not localRoot.Parent then return end
+		local selfPos = localRoot.Position
 
 		if Gloops and Gloops.Enabled then
 			local gloopItem = getGloopItem()
@@ -8796,7 +8813,10 @@ run(function()
 		if not char or not char.PrimaryPart then return false end
 		local tchar = v.Character
 		if not tchar or not tchar.PrimaryPart then return false end
-		local selfPos = entitylib.character.RootPart.Position
+		local localCharacter = entitylib.character
+		local localRoot = localCharacter and localCharacter.RootPart
+		if not localRoot or not localRoot.Parent then return false end
+		local selfPos = localRoot.Position
 		local targetPos = tchar.PrimaryPart.Position
 		local dist = (targetPos - selfPos).Magnitude
 		if dist > AttackRange.Value + 0 then return false end
@@ -9551,8 +9571,13 @@ run(function()
 	end)
 	
 	local function getAmmo(check)
-		for _, item in store.inventory.inventory.items do
-			if check.ammoItemTypes and table.find(check.ammoItemTypes, item.itemType) then
+		local inventory = store.inventory and store.inventory.inventory
+		local items = inventory and inventory.items
+		if type(items) ~= 'table' or type(check) ~= 'table' or type(check.ammoItemTypes) ~= 'table' then
+			return nil
+		end
+		for _, item in items do
+			if type(item) == 'table' and item.itemType and table.find(check.ammoItemTypes, item.itemType) then
 				return item.itemType
 			end
 		end
