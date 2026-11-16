@@ -7373,7 +7373,7 @@ run(function()
 	local lastAnimTime = 0 -- Track when last animation was played to prevent doubling
 	local anims, AnimDelay, AnimTween, armC0 = vape.Libraries.auraanims, tick()
 	local FROZEN_THRESHOLD = 10
-	local HIT_PERIOD = 0.100 -- Killaura hit period fallback matching SafeSpacing
+	local HIT_PERIOD = 0.100 -- Fallback interval used when weapon metadata is unavailable
 	local SERVER_FLOOR = 0.292
 	local SERVER_REACH = 14.399
 	local NORMAL_SWORD_SWING_SPEED = 0.35 -- Standard in-game sword swing speed, NEVER changes
@@ -7392,9 +7392,9 @@ run(function()
 
 	-- DYNAMIC SWORD TIMING & HITSPACING SYSTEM
 	local SwordTiming = {
-		SafeSpacing  = 0.100, -- Stealth Mode delay
-		HighSpacing  = 0.100, -- spacing in each hits for Advanced Mode only
-		HitFloor     = 0.292, --  he server's minimum allowed time between hits. Going below this will cause ghost hits.
+		SafeSpacing  = 0.100, -- Base spacing used by the Stealth profile
+		HighSpacing  = 0.100, -- Base spacing used by Advanced and Dynamic profiles
+		HitFloor     = 0.292, -- Existing timing floor; not a guaranteed server-side limit.
 		GapFloor     = 0.2945, -- minimum gap between con hits
 		ArrivalFloor = 0.274, -- how early it can arrive b4 ghosting 
 		CooldownCorrection = (0.017999999225139618 / 10) + 0.013412,
@@ -7627,7 +7627,7 @@ run(function()
 
 		local sword = store.hand
 		if not sword or not sword.tool or not isMeleeWeapon(sword.tool.Name) then
-			sword = (Limit and Limit.Enabled) and nil or store.tools.sword
+			sword = (Limit and Limit.Enabled) and nil or (store.tools and store.tools.sword)
 		end
 		if not sword or not sword.tool then return false end
 
@@ -7763,7 +7763,7 @@ run(function()
 	end
 
 	local function findVoidAxeSlot()
-		for slot, entry in store.inventory.hotbar or {} do
+		for slot, entry in (store.inventory and store.inventory.hotbar) or {} do
 			local item = entry and entry.item
 			local tool = item and item.tool
 			if (item and item.itemType == 'void_axe') or (tool and tool.Name == 'void_axe') then
@@ -7907,7 +7907,7 @@ run(function()
 
 		-- 6. Hannah (Blood For Blood Execution)
 		elseif kit:find('hannah') then
-			if target and target.Character and (tick() - lastHannahTime) > 0.2 then
+			if target and target.Character and target.RootPart and (tick() - lastHannahTime) > 0.2 then
 				if (target.RootPart.Position - myPos).Magnitude <= 16 then
 					local icon = target.Character:FindFirstChild('Hannah Execution Icon')
 					local hasTag = collectionService:HasTag(target.Character, 'HannahExecuteInteraction')
@@ -9058,10 +9058,10 @@ run(function()
 						return _gatherCache[1], _gatherCache[2]
 					end
 
-					local walls = Targets.Walls.Enabled or nil
-					local players = Targets.Players.Enabled
-					local npcs = Targets.NPCs.Enabled
-					local sort = sortmethods[Sort.Value]
+					local walls = Targets and Targets.Walls and Targets.Walls.Enabled or nil
+					local players = Targets and Targets.Players and Targets.Players.Enabled or false
+					local npcs = Targets and Targets.NPCs and Targets.NPCs.Enabled or false
+					local sort = sortmethods[Sort and Sort.Value or 'Distance']
 
 					local function buildList(range)
 						return entitylib.AllPosition({Range = range, Wallcheck = walls, Part = 'RootPart', Players = players, NPCs = npcs, Limit = 1, Sort = sort})
