@@ -7392,7 +7392,7 @@ run(function()
 
 	-- DYNAMIC SWORD TIMING & HITSPACING SYSTEM
 	local SwordTiming = {
-		SafeSpacing  = 0.299, -- Base spacing used by the Stealth profile
+		SafeSpacing  = 0.200, -- Base spacing used by the Stealth profile
 		HighSpacing  = 0.255, -- Base spacing used by Advanced and Dynamic profiles
 		HitFloor     = 0.292, -- Existing timing floor; not a guaranteed server-side limit.
 		GapFloor     = 0.2945, -- minimum gap between con hits
