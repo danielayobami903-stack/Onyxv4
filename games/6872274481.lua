@@ -8359,8 +8359,11 @@ run(function()
 	end
 
 	local function getGloopItem()
-		for _, item in store.inventory.inventory.items do
-			if item.itemType == 'glue_projectile' then
+		local inventory = store.inventory and store.inventory.inventory
+		local items = inventory and inventory.items
+		if type(items) ~= 'table' then return nil end
+		for _, item in items do
+			if type(item) == 'table' and item.itemType == 'glue_projectile' then
 				return item
 			end
 		end
@@ -8368,8 +8371,11 @@ run(function()
 	end
 
 	local function getFireballItem()
-		for _, item in store.inventory.inventory.items do
-			if item.itemType == 'fireball' then
+		local inventory = store.inventory and store.inventory.inventory
+		local items = inventory and inventory.items
+		if type(items) ~= 'table' then return nil end
+		for _, item in items do
+			if type(item) == 'table' and item.itemType == 'fireball' then
 				return item
 			end
 		end
@@ -8403,10 +8409,10 @@ run(function()
 		end
 
 		local myRoot = entitylib.character and entitylib.character.RootPart
-		if not myRoot then return false end
-		if (ent.RootPart.Position - myRoot.Position).Magnitude > 45 then return false end
+		if not myRoot or not myRoot.Parent or not item or not item.itemType or not item.tool or not item.tool.Parent then return false end
+		if not ent.RootPart.Parent or (ent.RootPart.Position - myRoot.Position).Magnitude > 45 then return false end
 
-		local selfPos = entitylib.character.RootPart.Position
+		local selfPos = myRoot.Position
 		local targetPart = ent.RootPart
 
 		local gmeta = bedwars.ProjectileMeta.glue_trap
@@ -8489,10 +8495,10 @@ run(function()
 		end
 
 		local myRoot = entitylib.character and entitylib.character.RootPart
-		if not myRoot then return false end
-		if (ent.RootPart.Position - myRoot.Position).Magnitude > 60 then return false end
+		if not myRoot or not myRoot.Parent or not item or not item.tool or not item.tool.Parent then return false end
+		if not ent.RootPart.Parent or (ent.RootPart.Position - myRoot.Position).Magnitude > 60 then return false end
 
-		local selfPos = entitylib.character.RootPart.Position
+		local selfPos = myRoot.Position
 		local targetPart = ent.RootPart
 
 		local fmeta = bedwars.ProjectileMeta.fireball or {launchVelocity = 80, gravitationalAcceleration = 0}
