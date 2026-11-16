@@ -8941,6 +8941,27 @@ run(function()
 		animPeriod = NORMAL_SWORD_SWING_SPEED
 	end
 
+	-- Touch-device UI helpers: keep mobile HUD access safe across Android client variants.
+	local function isKillauraTouchDevice()
+		local ok, enabled = pcall(function()
+			return inputService and inputService.TouchEnabled == true
+		end)
+		return ok and enabled == true
+	end
+
+	local function setKillauraMobileButtonVisible(visible)
+		if not isKillauraTouchDevice() then return false end
+		local ok, result = pcall(function()
+			local playerGui = lplr and lplr:FindFirstChildOfClass('PlayerGui')
+			local mobileUI = playerGui and playerGui:FindFirstChild('MobileUI')
+			local button = mobileUI and mobileUI:FindFirstChild('2')
+			if not button then return false end
+			button.Visible = visible == true
+			return true
+		end)
+		return ok and result == true
+	end
+
 	local function getKillauraWrist()
 		local camera = gameCamera or workspace.CurrentCamera
 		local viewmodel = camera and camera:FindFirstChild('Viewmodel')
@@ -8959,10 +8980,8 @@ run(function()
 				preciseRemainder = 0
 				preciseTimestamp = tick()
 
-				if inputService.TouchEnabled and not preserveSwordIcon then
-					pcall(function()
-						lplr.PlayerGui.MobileUI['2'].Visible = Limit and Limit.Enabled
-					end)
+				if isKillauraTouchDevice() and not preserveSwordIcon then
+					setKillauraMobileButtonVisible(Limit and Limit.Enabled)
 				end
 
 				if FastHits and FastHits.Enabled then
@@ -9211,8 +9230,8 @@ run(function()
 				stopKillauraFireLoop()
 				stopUseKitsLoop()
 				store.KillauraTarget = nil
-				if inputService.TouchEnabled then
-					pcall(function() lplr.PlayerGui.MobileUI['2'].Visible = true end)
+				if isKillauraTouchDevice() then
+					setKillauraMobileButtonVisible(true)
 				end
 				Attacking = false
 				getgenv().Attacking = false
@@ -9242,7 +9261,7 @@ run(function()
 			end,
 			Default = true
 		})
-		PSI.Object.Visible = inputService.TouchEnabled
+		PSI.Object.Visible = isKillauraTouchDevice()
 	end)
 
 	Targets = Killaura:CreateTargets({
@@ -9325,8 +9344,8 @@ run(function()
 	Limit = Killaura:CreateToggle({
 		Name = 'Limit to items',
 		Function = function(callback)
-			if inputService.TouchEnabled and Killaura.Enabled then
-				pcall(function() lplr.PlayerGui.MobileUI['2'].Visible = callback end)
+			if isKillauraTouchDevice() and Killaura.Enabled then
+				setKillauraMobileButtonVisible(callback)
 			end
 		end,
 		Tooltip = 'checks if you got sword held out'
