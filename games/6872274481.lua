@@ -7411,7 +7411,7 @@ run(function()
 	-- HighMode: 'Stealth Mode' | 'Advanced Mode' | 'Dynamic'
 	-- DynamicDelay: slider value (1-100) only used when HighMode == 'Dynamic'
 	function SwordTiming.Calculate(Speed, HighMode, DynamicDelay, Budget, Hits)
-		local Stock = Speed == 0.5
+		local Stock = Speed == 0.1
 		local Normal = (HighMode == 'Advanced Mode' or HighMode == 'Dynamic') and SwordTiming.HighSpacing or SwordTiming.SafeSpacing
 		local Spacing = Stock and Normal or WeaponSpacing[Speed] or Speed + 0.03
 
@@ -7469,7 +7469,7 @@ run(function()
 	local function getAttackDelay(meta)
 		local mode = (HitregMode and HitregMode.Value) or 'Stealth Mode'
 		local dynDelay = (DynamicDelaySlider and DynamicDelaySlider.Value) or 100
-		local Speed = meta.sword and meta.sword.attackSpeed or 0.5
+		local Speed = meta.sword and meta.sword.attackSpeed or 0.1
 		local Budget = 0
 		local Hits = 35
 		
